@@ -6,7 +6,8 @@ import (
 
 	"github.com/lentil1016/descheduler/pkg/client"
 	"github.com/lentil1016/descheduler/pkg/config"
-	"github.com/lentil1016/descheduler/pkg/handler"
+	"github.com/lentil1016/descheduler/pkg/node"
+	apps_v1 "k8s.io/api/apps/v1"
 	api_v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
 	k8sruntime "k8s.io/apimachinery/pkg/runtime"
@@ -32,8 +33,8 @@ type Event struct {
 type Descheduler struct {
 	clientset    kubernetes.Interface
 	queue        workqueue.RateLimitingInterface
-	Informer     cache.SharedIndexInformer
-	eventHandler handler.Handler
+	nodeInformer cache.SharedIndexInformer
+	rsInformer   cache.SharedIndexInformer
 }
 
 var conf config.ConfigSpec
@@ -69,12 +70,33 @@ func CreateDescheduler() (Descheduler, error) {
 		0,
 		cache.Indexers{})
 
+	// create a replica set informer with node selector
+	rsInformer := cache.NewSharedIndexInformer(
+		&cache.ListWatch{
+			ListFunc: func(options v1.ListOptions) (k8sruntime.Object, error) {
+				return client.AppsV1().ReplicaSets("").List(options)
+			},
+			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
+				return client.AppsV1().ReplicaSets("").Watch(options)
+			},
+		},
+		&apps_v1.ReplicaSet{},
+		0,
+		cache.Indexers{"byNamespace": cache.MetaNamespaceIndexFunc})
+
+	descheduler := &Descheduler{
+		clientset:    client,
+		queue:        queue,
+		nodeInformer: nodeInformer,
+		rsInformer:   rsInformer,
+	}
+
 	nodeInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		// Only handle the update event, because all nodes get ready with a update event ultimately.
 		UpdateFunc: func(old, new interface{}) {
 			// Healthy nodes will push update event constantly.
 			// Push event only when pod is getting ready.
-			if !isReady(old.(*api_v1.Node)) && isReady(new.(*api_v1.Node)) {
+			if !node.IsReady(old.(*api_v1.Node)) && node.IsReady(new.(*api_v1.Node)) {
 				newEvent.key, err = cache.MetaNamespaceKeyFunc(old)
 				newEvent.eventType = "getReady"
 				newEvent.resourceType = "node"
@@ -85,30 +107,52 @@ func CreateDescheduler() (Descheduler, error) {
 		},
 	})
 
-	controller := &Descheduler{
-		clientset: client,
-		queue:     queue,
-		Informer:  nodeInformer,
-	}
-	return *controller, nil
+	rsInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		// Only handle the update event, because all nodes get ready with a update event ultimately.
+		UpdateFunc: func(old, new interface{}) {
+			// Healthy nodes will push update event constantly.
+			// Push event only when pod is getting ready.
+			newEvent.key, err = cache.MetaNamespaceKeyFunc(old)
+			newEvent.eventType = "rsUpdate"
+			newEvent.resourceType = "replicaSet"
+			if err == nil {
+				queue.Add(newEvent)
+			}
+		},
+	})
+
+	return *descheduler, nil
 }
 
-func (c *Descheduler) Run(stopCh <-chan struct{}) {
+func (d *Descheduler) Run(stopCh chan struct{}) {
 	defer runtime.HandleCrash()
-	defer c.queue.ShutDown()
+	defer d.queue.ShutDown()
 
 	fmt.Println("Starting descheduler")
 	serverStartTime = time.Now().Local()
 
-	go c.Informer.Run(stopCh)
-	if !cache.WaitForCacheSync(stopCh, c.Informer.HasSynced) {
-		runtime.HandleError(fmt.Errorf("Timed out waiting for caches to sync"))
-		return
+	{
+		ch := make(chan struct{})
+		defer close(ch)
+		go d.nodeInformer.Run(ch)
+		if !cache.WaitForCacheSync(ch, d.nodeInformer.HasSynced) {
+			runtime.HandleError(fmt.Errorf("Timed out waiting for nodes caches to sync"))
+			return
+		}
+	}
+	{
+		ch := make(chan struct{})
+		defer close(ch)
+		go d.rsInformer.Run(ch)
+		if !cache.WaitForCacheSync(ch, d.nodeInformer.HasSynced) {
+			runtime.HandleError(fmt.Errorf("Timed out waiting for raplica sets caches to sync"))
+			return
+		}
 	}
 
 	fmt.Println("descheduler synced and ready")
 
-	wait.Until(c.runWorker, time.Second, stopCh)
+	wait.Until(d.runWorker, time.Second, stopCh)
 }
 
 func (d *Descheduler) runWorker() {
@@ -132,4 +176,14 @@ func (d *Descheduler) processNextItem() bool {
 		}
 	}
 	return true
+}
+
+func (d *Descheduler) processNodeItem(newEvent Event) error {
+	nodes, err := node.GetReadyNodes(d.nodeInformer.GetIndexer())
+	if err != nil {
+		fmt.Println("Failed to get ready nodes:", err)
+		return err
+	}
+	fmt.Println(nodes)
+	return nil
 }

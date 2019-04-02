@@ -1,4 +1,4 @@
-package descheduler
+package node
 
 import (
 	"fmt"
@@ -8,19 +8,9 @@ import (
 	"k8s.io/client-go/tools/cache"
 )
 
-func (d *Descheduler) processNodeItem(newEvent Event) error {
-	nodes, err := d.getReadyNodes()
-	if err != nil {
-		fmt.Println("Failed to get ready nodes:", err)
-		return err
-	}
-	fmt.Println(nodes)
-	return nil
-}
-
-func (d *Descheduler) getReadyNodes() ([]*api_v1.Node, error) {
+func GetReadyNodes(indexer cache.Indexer) ([]*api_v1.Node, error) {
 	// Get all nodes
-	indexer := d.Informer.GetIndexer()
+	fmt.Println(indexer.ListKeys())
 	var nodes []*api_v1.Node
 	err := cache.ListAll(indexer, labels.Everything(), func(m interface{}) {
 		nodes = append(nodes, m.(*api_v1.Node))
@@ -32,14 +22,14 @@ func (d *Descheduler) getReadyNodes() ([]*api_v1.Node, error) {
 	// Select the nodes that is ready
 	readyNodes := make([]*api_v1.Node, 0, len(nodes))
 	for _, node := range nodes {
-		if isReady(node) {
+		if IsReady(node) {
 			readyNodes = append(readyNodes, node)
 		}
 	}
 	return nodes, nil
 }
 
-func isReady(node *api_v1.Node) bool {
+func IsReady(node *api_v1.Node) bool {
 	ready := true
 	for i := range node.Status.Conditions {
 		cond := &node.Status.Conditions[i]
