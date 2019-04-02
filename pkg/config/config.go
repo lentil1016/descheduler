@@ -2,8 +2,11 @@ package config
 
 import (
 	"fmt"
+	"os"
+	"path"
 	"time"
 
+	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/viper"
 )
 
@@ -15,8 +18,10 @@ type config struct {
 }
 
 type ConfigSpec struct {
-	Triggers ConfigTriggers `yaml: tiggers`
-	Rules    ConfigRules    `yaml: rules`
+	KubeConfigFile string         `yaml: kubeconfig`
+	DryRun         bool           `yaml: dryRun`
+	Triggers       ConfigTriggers `yaml: tiggers`
+	Rules          ConfigRules    `yaml: rules`
 }
 
 type ConfigTriggers struct {
@@ -43,33 +48,35 @@ type ConfigRules struct {
 	NodeSelector      string   `yaml: nodeSelector`      // Selectors of the nodes that descheduler will affect to, nil indicates all nodes.
 }
 
-var defaultFromTime, _ = time.Parse("11:00PM", "11:00PM")
-
-var defaultConf = ConfigSpec{
-	Triggers: ConfigTriggers{
-		AllReplicasOnOneNode: true,
-		MaxGiniPercentage: ConfigResourcePercentage{
-			CPU:    50,
-			Memory: 50,
-		},
-		MaxSparedPercentage: ConfigResourcePercentage{
-			CPU:    80,
-			Memory: 80,
-		},
-		On: "event",
-		Time: ConfigTime{
-			From: defaultFromTime,
-			For:  "1h",
-		},
-	},
-	Rules: ConfigRules{
-		HardEviction:      false,
-		WorkingNamespaces: []string{},
-		NodeSelector:      "",
-	},
-}
-
 func setDefaults() {
+	var defaultFromTime, _ = time.Parse("11:00PM", "11:00PM")
+
+	var defaultConf = ConfigSpec{
+		DryRun: false,
+		Triggers: ConfigTriggers{
+			AllReplicasOnOneNode: true,
+			MaxGiniPercentage: ConfigResourcePercentage{
+				CPU:    50,
+				Memory: 50,
+			},
+			MaxSparedPercentage: ConfigResourcePercentage{
+				CPU:    80,
+				Memory: 80,
+			},
+			On: "event",
+			Time: ConfigTime{
+				From: defaultFromTime,
+				For:  "1h",
+			},
+		},
+		Rules: ConfigRules{
+			HardEviction:      false,
+			WorkingNamespaces: []string{},
+			NodeSelector:      "",
+		},
+	}
+
+	viper.SetDefault("spec.dryRun", defaultConf.DryRun)
 	viper.SetDefault("spec.triggers.preventAllReplicasOnOneNode", defaultConf.Triggers.AllReplicasOnOneNode)
 	viper.SetDefault("spec.triggers.maxGiniPercentage.cpu", defaultConf.Triggers.MaxGiniPercentage.CPU)
 	viper.SetDefault("spec.triggers.maxGiniPercentage.memory", defaultConf.Triggers.MaxGiniPercentage.Memory)
@@ -83,7 +90,24 @@ func setDefaults() {
 	viper.SetDefault("spec.rules.nodeSelector", defaultConf.Rules.NodeSelector)
 }
 
-func InitConfig() {
+func InitConfig(configFile string, kubeConfigFile string, dryRun bool) {
+	// Find home directory.
+	home, err := homedir.Dir()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	// set config file path
+	if configFile != "" {
+		// Use config file from the flag.
+		viper.SetConfigFile(configFile)
+	} else {
+		// Search config in home directory with name ".descheduler" (without extension).
+		viper.AddConfigPath(home)
+		viper.SetConfigName(".descheduler")
+	}
+	viper.SetDefault("spec.kubeconfig", path.Join(home, ".kube/config"))
 	setDefaults()
 	viper.AutomaticEnv() // read in environment variables that match
 
@@ -91,16 +115,26 @@ func InitConfig() {
 	if err := viper.ReadInConfig(); err == nil {
 		fmt.Println("Using config file:", viper.ConfigFileUsed())
 	}
+	// If config file have a wrong apiVersion, reset config to default
 	if viper.GetString("apiVersion") != currentApiVersion {
-		fmt.Printf("Error apiVersion %v in config file %v, expecting for %v\n", viper.GetString("apiVersion"), viper.ConfigFileUsed(), currentApiVersion)
+		fmt.Printf("Error apiVersion %v in config file %v, expecting for %v. will use the default config\n", viper.GetString("apiVersion"), viper.ConfigFileUsed(), currentApiVersion)
 		viper.Reset()
 	}
-	fmt.Println(viper.GetTime("spec.tiggers.time.from"))
-	fmt.Println(time.ParseDuration(viper.GetString("spec.tiggers.time.for")))
+
+	// Cmdline param overrides config file contents
+	if kubeConfigFile != "" {
+		viper.Set("spec.kubeconfig", kubeConfigFile)
+	}
+	if dryRun == true {
+		viper.Set("spec.dryRun", dryRun)
+	}
 }
 
 func GetConfig() ConfigSpec {
+	// Create config with values in viper
 	return ConfigSpec{
+		KubeConfigFile: viper.GetString("spec.kubeconfig"),
+		DryRun:         viper.GetBool("spec.dryRun"),
 		Triggers: ConfigTriggers{
 			AllReplicasOnOneNode: viper.GetBool("spec.triggers.allReplicasOnOneNode"),
 			MaxGiniPercentage: ConfigResourcePercentage{

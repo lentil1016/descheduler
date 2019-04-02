@@ -17,12 +17,9 @@ package cmd
 import (
 	"fmt"
 	"os"
-	"path"
 
 	"github.com/lentil1016/descheduler/pkg/config"
-	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
-	"github.com/spf13/viper"
 )
 
 var configFile string
@@ -56,24 +53,5 @@ func init() {
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
-	// Find home directory.
-	home, err := homedir.Dir()
-	if err != nil {
-		fmt.Println(err)
-		os.Exit(1)
-	}
-
-	if kubeConfigFile == "" {
-		kubeConfigFile = path.Join(home, ".kube/config")
-	}
-
-	if configFile != "" {
-		// Use config file from the flag.
-		viper.SetConfigFile(configFile)
-	} else {
-		// Search config in home directory with name ".descheduler" (without extension).
-		viper.AddConfigPath(home)
-		viper.SetConfigName(".descheduler")
-	}
-	config.InitConfig()
+	config.InitConfig(configFile, kubeConfigFile, dryRun)
 }

@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/lentil1016/descheduler/pkg/client"
 	"github.com/lentil1016/descheduler/pkg/config"
 	"github.com/lentil1016/descheduler/pkg/handler"
 	api_v1 "k8s.io/api/core/v1"
@@ -37,13 +38,20 @@ type Descheduler struct {
 
 var conf config.ConfigSpec
 
-func CreateDescheduler(client kubernetes.Interface) (Descheduler, error) {
+func CreateDescheduler() (Descheduler, error) {
 	conf = config.GetConfig()
+
+	kubeconfig := conf.KubeConfigFile
+	fmt.Println("Using kubeconfig file:", kubeconfig)
+	client, err := client.CreateClient(kubeconfig)
+	if err != nil {
+		fmt.Println(err)
+		return Descheduler{}, err
+	}
 	// create a work queue
 	queue := workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
 
 	var newEvent Event
-	var err error
 
 	// create a node informer with node selector
 	nodeInformer := cache.NewSharedIndexInformer(
@@ -117,7 +125,6 @@ func (d *Descheduler) processNextItem() bool {
 
 	defer d.queue.Done(newEvent)
 
-	fmt.Println("test")
 	if newEvent.(Event).resourceType == "node" {
 		err := d.processNodeItem(newEvent.(Event))
 		if err != nil {

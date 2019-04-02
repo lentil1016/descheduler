@@ -6,22 +6,13 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/lentil1016/descheduler/pkg/client"
 	"github.com/lentil1016/descheduler/pkg/descheduler"
 	"github.com/spf13/cobra"
 )
 
 // doDescheduleCmd do the calculate and then deschedule
 func doDescheduleCmd(cmd *cobra.Command, args []string) {
-	client, err := client.CreateClient(kubeConfigFile)
-	if err == nil {
-		fmt.Println("Using kubeconfig file:", kubeConfigFile)
-	} else {
-		fmt.Println(err)
-		return
-	}
-
-	d, err := descheduler.CreateDescheduler(client)
+	d, err := descheduler.CreateDescheduler()
 	if err != nil {
 		fmt.Println(err)
 	}
