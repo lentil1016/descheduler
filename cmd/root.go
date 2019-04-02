@@ -19,6 +19,7 @@ import (
 	"os"
 	"path"
 
+	"github.com/lentil1016/descheduler/pkg/config"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -74,11 +75,5 @@ func initConfig() {
 		viper.AddConfigPath(home)
 		viper.SetConfigName(".descheduler")
 	}
-
-	viper.AutomaticEnv() // read in environment variables that match
-
-	// If a config file is found, read it in.
-	if err := viper.ReadInConfig(); err == nil {
-		fmt.Println("Using config file:", viper.ConfigFileUsed())
-	}
+	config.InitConfig()
 }

@@ -14,7 +14,9 @@ import (
 // doDescheduleCmd do the calculate and then deschedule
 func doDescheduleCmd(cmd *cobra.Command, args []string) {
 	client, err := client.CreateClient(kubeConfigFile)
-	if client == nil {
+	if err == nil {
+		fmt.Println("Using kubeconfig file:", kubeConfigFile)
+	} else {
 		fmt.Println(err)
 		return
 	}
