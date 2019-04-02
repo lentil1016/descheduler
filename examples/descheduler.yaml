@@ -1,0 +1,19 @@
+apiVersion: descheduler.lentil1016.cn/v1alpha1
+spec:
+    tiggers:
+        allReplicasOnOneNode: true
+        maxGiniPercentage:
+            cpu: 50
+            memory: 50
+        maxSparedPercentage:
+            cpu: 80
+            memory: 80
+        on: "time"
+        # On: "event"
+        time:
+            from: 10:00PM
+            for: "1h"
+    rules:
+        hardEviction: false
+        affectNamespaces: ["default"]
+        nodeSelector: ""
