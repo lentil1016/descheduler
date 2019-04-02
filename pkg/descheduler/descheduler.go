@@ -35,6 +35,7 @@ type Descheduler struct {
 	queue        workqueue.RateLimitingInterface
 	nodeInformer cache.SharedIndexInformer
 	rsInformer   cache.SharedIndexInformer
+	podInformer  cache.SharedIndexInformer
 }
 
 var conf config.ConfigSpec
@@ -70,7 +71,7 @@ func CreateDescheduler() (Descheduler, error) {
 		0,
 		cache.Indexers{})
 
-	// create a replica set informer with node selector
+	// create a replica set informer
 	rsInformer := cache.NewSharedIndexInformer(
 		&cache.ListWatch{
 			ListFunc: func(options v1.ListOptions) (k8sruntime.Object, error) {
@@ -84,11 +85,26 @@ func CreateDescheduler() (Descheduler, error) {
 		0,
 		cache.Indexers{"byNamespace": cache.MetaNamespaceIndexFunc})
 
+	// create a pod informer
+	podInformer := cache.NewSharedIndexInformer(
+		&cache.ListWatch{
+			ListFunc: func(options v1.ListOptions) (k8sruntime.Object, error) {
+				return client.CoreV1().Pods("").List(options)
+			},
+			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
+				return client.CoreV1().Pods("").Watch(options)
+			},
+		},
+		&api_v1.Pod{},
+		0,
+		cache.Indexers{"byNamespace": cache.MetaNamespaceIndexFunc})
+
 	descheduler := &Descheduler{
 		clientset:    client,
 		queue:        queue,
 		nodeInformer: nodeInformer,
 		rsInformer:   rsInformer,
+		podInformer:  podInformer,
 	}
 
 	nodeInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -144,7 +160,16 @@ func (d *Descheduler) Run(stopCh chan struct{}) {
 		ch := make(chan struct{})
 		defer close(ch)
 		go d.rsInformer.Run(ch)
-		if !cache.WaitForCacheSync(ch, d.nodeInformer.HasSynced) {
+		if !cache.WaitForCacheSync(ch, d.rsInformer.HasSynced) {
+			runtime.HandleError(fmt.Errorf("Timed out waiting for raplica sets caches to sync"))
+			return
+		}
+	}
+	{
+		ch := make(chan struct{})
+		defer close(ch)
+		go d.podInformer.Run(ch)
+		if !cache.WaitForCacheSync(ch, d.podInformer.HasSynced) {
 			runtime.HandleError(fmt.Errorf("Timed out waiting for raplica sets caches to sync"))
 			return
 		}
