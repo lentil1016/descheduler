@@ -30,6 +30,11 @@ func (dh *descheduleHandler) Handle(event Event) {
 	}
 	fmt.Println("descheduleHandler: Pods picking done, start to evict")
 	predictor.Evict(pods)
+	recoveringMap = make(map[string]bool, len(pods))
+	for _, pod := range pods {
+		rsName := predictor.GetPodReplicaSetName(pod)
+		recoveringMap[rsName] = true
+	}
 	isRecovering = true
-	fmt.Println("deschedule event handled")
+	fmt.Println("descheduleHandler: Eviction is finished, waiting for recovering")
 }

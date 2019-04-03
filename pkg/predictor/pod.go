@@ -37,17 +37,6 @@ func getUnfitPods(node *api_v1.Node) []*api_v1.Pod {
 	return []*api_v1.Pod{}
 }
 
-func CheckReplicas(pods []*api_v1.Pod) []*api_v1.Pod {
-	for _, pod := range pods {
-		ownerRefList := ownerRef(pod)
-		if isReplicaSetPod(ownerRefList) {
-
-		}
-	}
-	return []*api_v1.Pod{}
-
-}
-
 func getPodsHaveReplicas(node *api_v1.Node) []*api_v1.Pod {
 	return []*api_v1.Pod{}
 }
@@ -60,11 +49,10 @@ func getEvictablePods(node *api_v1.Node) ([]*api_v1.Pod, error) {
 	evictablePods := make([]*api_v1.Pod, 0)
 	for _, pod := range pods {
 		if !isEvictable(pod) {
-			fmt.Println("UnEvictable, ", pod.ObjectMeta.Name)
 			continue
 		} else {
 			evictablePods = append(evictablePods, pod)
-			fmt.Println(pod.ObjectMeta.Name)
+			fmt.Println("Found pod that evictable: ", pod.ObjectMeta.Name)
 		}
 	}
 	return evictablePods, nil
@@ -130,7 +118,10 @@ func getPodsOnNode(node *api_v1.Node) ([]*api_v1.Pod, error) {
 	if err != nil {
 		return []*api_v1.Pod{}, err
 	}
+	return getPods(fieldSelector)
+}
 
+func getPods(fieldSelector fields.Selector) ([]*api_v1.Pod, error) {
 	podList, err := client.CoreV1().Pods(api_v1.NamespaceAll).List(
 		v1.ListOptions{FieldSelector: fieldSelector.String()})
 	if err != nil {

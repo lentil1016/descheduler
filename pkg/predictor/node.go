@@ -19,11 +19,10 @@ type nodeScore struct {
 // Splite node into high spared nodes list and low spared state nodes list
 func GetBusyNodes() ([]*api_v1.Node, bool) {
 	operatableNodes, _ := getOperatableNodes()
-	// TODO: remove Comment marks
-	/*if len(operatableNodes) < 2 {
+	if len(operatableNodes) < 2 {
 		fmt.Println("Deschedule event droped because Operatable node is less than 2")
 		return []*api_v1.Node{}, []*api_v1.Node{}, false
-	}*/
+	}
 
 	// ranking nodes by most spared and most usage
 	var sparedRank, usageRank, normalRank []nodeScore

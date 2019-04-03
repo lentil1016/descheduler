@@ -13,6 +13,7 @@ type eventHandler interface {
 // There is no race condition on this value because there is only one worker thread
 // So only one event will be handled at a time
 var isRecovering = false
+var recoveringMap map[string]bool
 
 func NewEvent(key, eventType, resourceType string) Event {
 	return Event{
