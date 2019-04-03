@@ -26,15 +26,16 @@ type ConfigSpec struct {
 
 type ConfigTriggers struct {
 	AllReplicasOnOneNode bool                     `yaml: allReplicasOnOneNode` // If all pods(more than one) of a replicaSet run on one single node, evict one of them.
-	MaxGiniPercentage    ConfigResourcePercentage `yaml: maxGiniPercentage`
+	MinSparedPercentage  ConfigResourcePercentage `yaml: minSparedPercentage`
 	MaxSparedPercentage  ConfigResourcePercentage `yaml: maxSparedPercentage`
 	Mode                 string                   `yaml: mode`
 	Time                 ConfigTime               `yaml: time`
 }
 
 type ConfigResourcePercentage struct {
-	CPU    int `yaml: cpu`
-	Memory int `yaml: memory`
+	CPU    float64 `yaml: cpu`
+	Memory float64 `yaml: memory`
+	Pod    float64 `yaml: pod`
 }
 
 type ConfigTime struct {
@@ -55,13 +56,15 @@ func setDefaults() {
 		DryRun: false,
 		Triggers: ConfigTriggers{
 			AllReplicasOnOneNode: true,
-			MaxGiniPercentage: ConfigResourcePercentage{
-				CPU:    50,
-				Memory: 50,
+			MinSparedPercentage: ConfigResourcePercentage{
+				CPU:    30,
+				Memory: 30,
+				Pod:    30,
 			},
 			MaxSparedPercentage: ConfigResourcePercentage{
-				CPU:    80,
-				Memory: 80,
+				CPU:    70,
+				Memory: 70,
+				Pod:    70,
 			},
 			Mode: "event",
 			Time: ConfigTime{
@@ -78,10 +81,12 @@ func setDefaults() {
 
 	viper.SetDefault("spec.dryRun", defaultConf.DryRun)
 	viper.SetDefault("spec.triggers.preventAllReplicasOnOneNode", defaultConf.Triggers.AllReplicasOnOneNode)
-	viper.SetDefault("spec.triggers.maxGiniPercentage.cpu", defaultConf.Triggers.MaxGiniPercentage.CPU)
-	viper.SetDefault("spec.triggers.maxGiniPercentage.memory", defaultConf.Triggers.MaxGiniPercentage.Memory)
+	viper.SetDefault("spec.triggers.minSparedPercentage.cpu", defaultConf.Triggers.MinSparedPercentage.CPU)
+	viper.SetDefault("spec.triggers.minSparedPercentage.memory", defaultConf.Triggers.MinSparedPercentage.Memory)
+	viper.SetDefault("spec.triggers.minSparedPercentage.pod", defaultConf.Triggers.MinSparedPercentage.Pod)
 	viper.SetDefault("spec.triggers.maxSparedPercentage.cpu", defaultConf.Triggers.MaxSparedPercentage.CPU)
 	viper.SetDefault("spec.triggers.maxSparedPercentage.memory", defaultConf.Triggers.MaxSparedPercentage.Memory)
+	viper.SetDefault("spec.triggers.maxSparedPercentage.pod", defaultConf.Triggers.MaxSparedPercentage.Pod)
 	viper.SetDefault("spec.triggers.mode", defaultConf.Triggers.Mode)
 	viper.SetDefault("spec.triggers.time.from", defaultConf.Triggers.Time.From)
 	viper.SetDefault("spec.triggers.time.for", defaultConf.Triggers.Time.For)
@@ -137,13 +142,15 @@ func GetConfig() ConfigSpec {
 		DryRun:         viper.GetBool("spec.dryRun"),
 		Triggers: ConfigTriggers{
 			AllReplicasOnOneNode: viper.GetBool("spec.triggers.allReplicasOnOneNode"),
-			MaxGiniPercentage: ConfigResourcePercentage{
-				CPU:    viper.GetInt("spec.triggers.maxGiniPercentage.cpu"),
-				Memory: viper.GetInt("spec.triggers.maxGiniPercentage.memory"),
+			MinSparedPercentage: ConfigResourcePercentage{
+				CPU:    viper.GetFloat64("spec.triggers.minSparedPercentage.cpu"),
+				Memory: viper.GetFloat64("spec.triggers.minSparedPercentage.memory"),
+				Pod:    viper.GetFloat64("spec.triggers.minSparedPercentage.pod"),
 			},
 			MaxSparedPercentage: ConfigResourcePercentage{
-				CPU:    viper.GetInt("spec.triggers.maxSparedPercentage.cpu"),
-				Memory: viper.GetInt("spec.triggers.maxSparedPercentage.memory"),
+				CPU:    viper.GetFloat64("spec.triggers.maxSparedPercentage.cpu"),
+				Memory: viper.GetFloat64("spec.triggers.maxSparedPercentage.memory"),
+				Pod:    viper.GetFloat64("spec.triggers.maxSparedPercentage.pod"),
 			},
 			Mode: viper.GetString("spec.triggers.mode"),
 			Time: ConfigTime{

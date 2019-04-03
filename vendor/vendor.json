@@ -1308,6 +1308,18 @@
 			"revisionTime": "2019-03-11T22:06:38Z"
 		},
 		{
+			"checksumSHA1": "s1vttp1Mwlt2Ocsb/8HM3feF5T0=",
+			"path": "k8s.io/kubernetes/pkg/api/v1/resource",
+			"revision": "8b98e802eddb9f478ff7d991a2f72f60c165388a",
+			"revisionTime": "2019-01-27T19:03:18Z"
+		},
+		{
+			"checksumSHA1": "pnbqA0uxBpuW1E6ABGviNpPsyNQ=",
+			"path": "k8s.io/kubernetes/pkg/apis/core",
+			"revision": "8b98e802eddb9f478ff7d991a2f72f60c165388a",
+			"revisionTime": "2019-01-27T19:03:18Z"
+		},
+		{
 			"checksumSHA1": "NgeyOMXBGD9b3+UN4tdCuMznTjg=",
 			"path": "k8s.io/utils/buffer",
 			"revision": "21c4ce38f2a793ec01e925ddc31216500183b773",

@@ -10,6 +10,10 @@ type eventHandler interface {
 	Handle(event Event)
 }
 
+// There is no race condition on this value because there is only one worker thread
+// So only one event will be handled at a time
+var isRecovering = false
+
 func NewEvent(key, eventType, resourceType string) Event {
 	return Event{
 		key:          key,
@@ -19,10 +23,17 @@ func NewEvent(key, eventType, resourceType string) Event {
 }
 
 func Type(event Event) eventHandler {
-	if event.resourceType == "timer" || event.resourceType == "node" {
-		return descheduleHandler{}
-	} else if event.resourceType == "replicaSet" {
-		return recoverHandler{}
+	if isRecovering {
+		// Handle recover event when the replica sets is recovering
+		if event.resourceType == "replicaSet" {
+			return &recoverHandler{}
+		}
+	} else {
+		// Handle deschedule event only when replicas number of the replica sets
+		// that is being descheduled last time have recovered.
+		if event.resourceType == "timer" || event.resourceType == "node" {
+			return &descheduleHandler{}
+		}
 	}
 	return defaultHandler{}
 }

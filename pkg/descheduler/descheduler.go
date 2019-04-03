@@ -126,7 +126,8 @@ func CreateDescheduler() (Descheduler, error) {
 
 	predictor.Init(nodeInformer.GetIndexer(),
 		rsInformer.GetIndexer(),
-		podInformer.GetIndexer())
+		podInformer.GetIndexer(),
+		client)
 
 	return &descheduler{
 		clientset:    client,

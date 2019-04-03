@@ -2,12 +2,14 @@ apiVersion: descheduler.lentil1016.cn/v1alpha1
 spec:
     triggers:
         allReplicasOnOneNode: true
-        maxGiniPercentage:
-            cpu: 50
-            memory: 50
+        minSparedPercentage:
+            cpu: 30
+            memory: 30
+            pod: 70
         maxSparedPercentage:
-            cpu: 80
-            memory: 80
+            cpu: 70
+            memory: 70
+            pod: 70
         mode: "time"
         # mode: "event"
         time:
