@@ -2,6 +2,7 @@ package predictor
 
 import (
 	"fmt"
+	"sort"
 
 	api_v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -10,23 +11,75 @@ import (
 	v1_resource "k8s.io/kubernetes/pkg/api/v1/resource"
 )
 
+type nodeScore struct {
+	node  *api_v1.Node
+	score float64
+}
+
 // Splite node into high spared nodes list and low spared state nodes list
-func InBadSparedState() (highSpared, lowSpared []*api_v1.Node, ok bool) {
+func GetBusyNodes() ([]*api_v1.Node, bool) {
 	operatableNodes, _ := getOperatableNodes()
-	if len(operatableNodes) < 2 {
+	/*if len(operatableNodes) < 2 {
 		fmt.Println("Deschedule event droped because Operatable node is less than 2")
 		return []*api_v1.Node{}, []*api_v1.Node{}, false
-	}
+	}*/
+
+	// ranking nodes by most spared and most usage
+	var sparedRank, usageRank, normalRank []nodeScore
 	for _, node := range operatableNodes {
+		nodeName := node.ObjectMeta.Name
 		cpuUsage, memUsage, podUsage, err := getNodeUsage(node)
 		if err != nil {
-			fmt.Println("Deschedule event droped, failed to get node usage, ", err)
-			return []*api_v1.Node{}, []*api_v1.Node{}, false
+			fmt.Println("Deschedule event aborted, failed to get node usage, ", err)
+			return []*api_v1.Node{}, false
 		}
-		usageScore, sparedScore := scoreNode(cpuUsage, memUsage, podUsage)
-		fmt.Println(usageScore, sparedScore)
+		usageScore, sparedScore, normalScore := scoreNode(cpuUsage, memUsage, podUsage)
+
+		if usageScore != 0 {
+			// High Usage node, marked if any resource is running low.
+			fmt.Printf("Node %v is marked as a high usage node\n", nodeName)
+			usageRank = append(usageRank, nodeScore{node, sparedScore})
+		} else if sparedScore != 0 && isNodeSchedulable(node) {
+			// High spared node, marked if some resource is highly spared
+			// and node is schedulable, and no resource is running low.
+			fmt.Printf("Node %v is marked as a high spared node\n", nodeName)
+			sparedRank = append(sparedRank, nodeScore{node, sparedScore})
+		} else {
+			// Normal node, returned as usage node when there is no usage node.
+			fmt.Printf("Node %v is marked as a normal node\n", nodeName)
+			normalRank = append(normalRank, nodeScore{node, normalScore})
+		}
 	}
-	return []*api_v1.Node{}, []*api_v1.Node{}, true
+	// Do ranking
+	sort.Slice(sparedRank, func(i, j int) bool { return sparedRank[i].score > sparedRank[j].score })
+	sort.Slice(usageRank, func(i, j int) bool { return usageRank[i].score > usageRank[j].score })
+	sort.Slice(normalRank, func(i, j int) bool { return normalRank[i].score > normalRank[j].score })
+
+	// Put rank into slice
+	var sparedNodes, usageNodes, normalNodes []*api_v1.Node
+	for _, rankItem := range sparedRank {
+		sparedNodes = append(sparedNodes, rankItem.node)
+	}
+	for _, rankItem := range usageRank {
+		usageNodes = append(usageNodes, rankItem.node)
+	}
+	for _, rankItem := range normalRank {
+		normalNodes = append(normalNodes, rankItem.node)
+	}
+
+	if len(normalNodes) == 0 {
+		if len(usageNodes) == 0 {
+			fmt.Println("Deschedule event aborted, all nodes are spared, nothing to deschedule")
+			return []*api_v1.Node{}, false
+		} else if len(sparedNodes) == 0 {
+			fmt.Println("Deschedule event aborted, all nodes are busy, can't deschedule")
+			return []*api_v1.Node{}, false
+		}
+	} else if len(usageNodes) == 0 {
+		fmt.Println("All nodes reserved sufficient resource. Try deschedule anyway.")
+		return normalNodes, true
+	}
+	return usageNodes, true
 }
 
 func getNodeUsage(node *api_v1.Node) (float64, float64, float64, error) {
@@ -59,33 +112,6 @@ func getNodeUsage(node *api_v1.Node) (float64, float64, float64, error) {
 	memUsage := float64(float64(totalMemReq.Value()) / float64(nodeCapacity.Memory().Value()) * 100)
 	podUsage := float64((float64(totalPods) * 100) / float64(nodeCapacity.Pods().Value()))
 	return cpuUsage, memUsage, podUsage, nil
-}
-
-func scoreNode(cpuUsage, memUsage, podUsage float64) (float64, float64) {
-	var usageScore, sparedScore float64
-	usageScore, sparedScore = scoreResource(cpuUsage,
-		(100 - conf.Triggers.MinSparedPercentage.CPU),
-		conf.Triggers.MaxSparedPercentage.CPU,
-		usageScore, sparedScore)
-	usageScore, sparedScore = scoreResource(memUsage,
-		(100 - conf.Triggers.MinSparedPercentage.Memory),
-		conf.Triggers.MaxSparedPercentage.Memory,
-		usageScore, sparedScore)
-	usageScore, sparedScore = scoreResource(podUsage,
-		(100 - conf.Triggers.MinSparedPercentage.Pod),
-		conf.Triggers.MaxSparedPercentage.Pod,
-		usageScore, sparedScore)
-	return usageScore, sparedScore
-}
-
-func scoreResource(usage, maxUsage, maxSpared, usageScore, sparedScore float64) (float64, float64) {
-	spared := 100 - usage
-	if usage > maxUsage {
-		usageScore = usageScore + usage*usage/100
-	} else if spared > maxSpared {
-		sparedScore = sparedScore + spared*spared/100
-	}
-	return usageScore, sparedScore
 }
 
 func getOperatableNodes() ([]*api_v1.Node, error) {

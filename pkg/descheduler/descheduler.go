@@ -29,7 +29,6 @@ type descheduler struct {
 	queue        workqueue.RateLimitingInterface
 	nodeInformer cache.SharedIndexInformer
 	rsInformer   cache.SharedIndexInformer
-	podInformer  cache.SharedIndexInformer
 }
 
 type Descheduler interface {
@@ -79,20 +78,6 @@ func CreateDescheduler() (Descheduler, error) {
 		0,
 		cache.Indexers{"byNamespace": cache.MetaNamespaceIndexFunc})
 
-	// create a pod informer, just used as cache, won't bind event handler.
-	podInformer := cache.NewSharedIndexInformer(
-		&cache.ListWatch{
-			ListFunc: func(options v1.ListOptions) (k8sruntime.Object, error) {
-				return client.CoreV1().Pods("").List(options)
-			},
-			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
-				return client.CoreV1().Pods("").Watch(options)
-			},
-		},
-		&api_v1.Pod{},
-		0,
-		cache.Indexers{"byNamespace": cache.MetaNamespaceIndexFunc})
-
 	nodeInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		// Only handle the update event, because nodes get ready with an update event ultimately.
 		UpdateFunc: func(old, new interface{}) {
@@ -117,6 +102,37 @@ func CreateDescheduler() (Descheduler, error) {
 		},
 	})
 
+	// TODO: Delete this
+	podInformer := cache.NewSharedIndexInformer(
+		&cache.ListWatch{
+			ListFunc: func(options v1.ListOptions) (k8sruntime.Object, error) {
+				return client.CoreV1().Pods("").List(options)
+			},
+			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
+				return client.CoreV1().Pods("").Watch(options)
+			},
+		},
+		&api_v1.Pod{},
+		0,
+		cache.Indexers{"byNamespace": cache.MetaNamespaceIndexFunc})
+	podInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		// Only handle the update event, because replicaSet get ready with an update event.
+		UpdateFunc: func(old, new interface{}) {
+			key, err := cache.MetaNamespaceKeyFunc(old)
+			if err == nil {
+				queue.Add(handler.NewEvent(key, "getReady", "node"))
+			}
+		},
+	})
+	{
+		ch := make(chan struct{})
+		go podInformer.Run(ch)
+		if !cache.WaitForCacheSync(ch, podInformer.HasSynced) {
+			runtime.HandleError(fmt.Errorf("Timed out waiting for raplica sets caches to sync"))
+		}
+	}
+	// TODO: Delete this
+
 	err = timer.InitTimer(func() {
 		queue.Add(handler.NewEvent("", "onTime", "timer"))
 	})
@@ -126,7 +142,6 @@ func CreateDescheduler() (Descheduler, error) {
 
 	predictor.Init(nodeInformer.GetIndexer(),
 		rsInformer.GetIndexer(),
-		podInformer.GetIndexer(),
 		client)
 
 	return &descheduler{
@@ -134,7 +149,6 @@ func CreateDescheduler() (Descheduler, error) {
 		queue:        queue,
 		nodeInformer: nodeInformer,
 		rsInformer:   rsInformer,
-		podInformer:  podInformer,
 	}, nil
 }
 
@@ -159,15 +173,6 @@ func (d *descheduler) Run(stopCh chan struct{}) {
 		defer close(ch)
 		go d.rsInformer.Run(ch)
 		if !cache.WaitForCacheSync(ch, d.rsInformer.HasSynced) {
-			runtime.HandleError(fmt.Errorf("Timed out waiting for raplica sets caches to sync"))
-			return
-		}
-	}
-	{
-		ch := make(chan struct{})
-		defer close(ch)
-		go d.podInformer.Run(ch)
-		if !cache.WaitForCacheSync(ch, d.podInformer.HasSynced) {
 			runtime.HandleError(fmt.Errorf("Timed out waiting for raplica sets caches to sync"))
 			return
 		}

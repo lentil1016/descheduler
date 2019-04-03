@@ -208,6 +208,12 @@
 			"revisionTime": "2019-03-13T11:33:46Z"
 		},
 		{
+			"checksumSHA1": "cS79I6+UXzEETFd1zHHITsfJLKc=",
+			"path": "github.com/kubernetes/kubernetes/pkg/kubelet/types",
+			"revision": "66674f549626cc41f04e475d2c0e865116c4cd40",
+			"revisionTime": "2019-03-20T02:01:17Z"
+		},
+		{
 			"checksumSHA1": "1ott3ehyvBPpWmJx6G2vEFSocmQ=",
 			"path": "github.com/magiconair/properties",
 			"revision": "7c38529aac7222391b7a2661365177a97e21b998",
@@ -654,6 +660,13 @@
 			"revisionTime": "2019-03-27T16:04:48Z"
 		},
 		{
+			"checksumSHA1": "BF29t3YvVdvGxCfp4xYhC2vApDs=",
+			"origin": "k8s.io/kubernetes/vendor/k8s.io/apiextensions-apiserver/pkg/features",
+			"path": "k8s.io/apiextensions-apiserver/pkg/features",
+			"revision": "8b98e802eddb9f478ff7d991a2f72f60c165388a",
+			"revisionTime": "2019-01-27T19:03:18Z"
+		},
+		{
 			"checksumSHA1": "7LwJCJKBLe/wYL3uudK2ULNo640=",
 			"path": "k8s.io/apimachinery/pkg/api/apitesting",
 			"revision": "c9defaaddf6f05ecb2dd115c1bed600265501daf",
@@ -936,6 +949,27 @@
 			"revisionTime": "2019-03-13T11:33:46Z"
 		},
 		{
+			"checksumSHA1": "2UPmqOy91P/nfx3YFeX60VxuQoU=",
+			"origin": "k8s.io/kubernetes/vendor/k8s.io/apiserver/pkg/features",
+			"path": "k8s.io/apiserver/pkg/features",
+			"revision": "8b98e802eddb9f478ff7d991a2f72f60c165388a",
+			"revisionTime": "2019-01-27T19:03:18Z"
+		},
+		{
+			"checksumSHA1": "Ejl2IQY0O2bawpQ7e5GfUfKqEu4=",
+			"origin": "github.com/kubernetes/kubernetes/vendor/k8s.io/apiserver/pkg/util/feature",
+			"path": "k8s.io/apiserver/pkg/util/feature",
+			"revision": "66674f549626cc41f04e475d2c0e865116c4cd40",
+			"revisionTime": "2019-03-20T02:01:17Z"
+		},
+		{
+			"checksumSHA1": "5KZOWDvq3GS7w6/TSafHT40FnRM=",
+			"origin": "github.com/kubernetes/kubernetes/vendor/k8s.io/apiserver/pkg/util/feature/testing",
+			"path": "k8s.io/apiserver/pkg/util/feature/testing",
+			"revision": "66674f549626cc41f04e475d2c0e865116c4cd40",
+			"revisionTime": "2019-03-20T02:01:17Z"
+		},
+		{
 			"checksumSHA1": "LLqG+6aFkPwUqzfHu7NffRooerQ=",
 			"path": "k8s.io/client-go/discovery",
 			"revision": "1b476292615b7921740d8d0f0c4ce1bc23a72791",
@@ -1146,6 +1180,12 @@
 			"revisionTime": "2019-02-12T20:39:40Z"
 		},
 		{
+			"checksumSHA1": "xsKS1rrY/fd4tGQPoAMLuWcwr1g=",
+			"path": "k8s.io/client-go/listers/apps/v1",
+			"revision": "1b476292615b7921740d8d0f0c4ce1bc23a72791",
+			"revisionTime": "2019-02-12T20:39:40Z"
+		},
+		{
 			"checksumSHA1": "xzgS2YeBsvo8tnz4nbRiv3gcedw=",
 			"path": "k8s.io/client-go/pkg/apis/clientauthentication",
 			"revision": "1b476292615b7921740d8d0f0c4ce1bc23a72791",
@@ -1316,6 +1356,18 @@
 		{
 			"checksumSHA1": "pnbqA0uxBpuW1E6ABGviNpPsyNQ=",
 			"path": "k8s.io/kubernetes/pkg/apis/core",
+			"revision": "8b98e802eddb9f478ff7d991a2f72f60c165388a",
+			"revisionTime": "2019-01-27T19:03:18Z"
+		},
+		{
+			"checksumSHA1": "4TQMiCMg6RGD6gku0+XbrwAAklk=",
+			"path": "k8s.io/kubernetes/pkg/apis/scheduling",
+			"revision": "8b98e802eddb9f478ff7d991a2f72f60c165388a",
+			"revisionTime": "2019-01-27T19:03:18Z"
+		},
+		{
+			"checksumSHA1": "Avr7/xjq10zZU5EHTJ841b2s+pk=",
+			"path": "k8s.io/kubernetes/pkg/features",
 			"revision": "8b98e802eddb9f478ff7d991a2f72f60c165388a",
 			"revisionTime": "2019-01-27T19:03:18Z"
 		},

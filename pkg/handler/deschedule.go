@@ -11,24 +11,22 @@ type descheduleHandler struct {
 }
 
 func (dh *descheduleHandler) Handle(event Event) {
-	if !isTriggered() {
+	if timer.IsOutOfTime() {
+		fmt.Println("Deschedule event aborted by timer.")
+		return
+	}
+
+	// get busy nodes.
+	busyNodes, ok := predictor.GetBusyNodes()
+	if !ok {
 		return
 	}
 	fmt.Println("descheduleHandler: Deschedule Triggered, start picking Pods.")
-
+	_, err := predictor.GetEvictablePods(busyNodes)
+	if err != nil {
+		fmt.Println(err)
+		return
+	}
 	isRecovering = true
 	fmt.Println("deschedule event handled")
-}
-
-func isTriggered() bool {
-	if timer.IsOutOfTime() {
-		fmt.Println("Deschedule event droped by timer.")
-		return false
-	}
-	// check if nodes are in low spared or in high spared.
-	if _, _, ok := predictor.InBadSparedState(); ok {
-		return true
-	} else {
-		return false
-	}
 }
