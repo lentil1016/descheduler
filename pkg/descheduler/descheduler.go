@@ -6,9 +6,9 @@ import (
 
 	"github.com/lentil1016/descheduler/pkg/client"
 	"github.com/lentil1016/descheduler/pkg/config"
+	"github.com/lentil1016/descheduler/pkg/handler"
 	"github.com/lentil1016/descheduler/pkg/node"
 	"github.com/lentil1016/descheduler/pkg/timer"
-	"github.com/lentil1016/descheduler/pkg/trigger"
 	apps_v1 "k8s.io/api/apps/v1"
 	api_v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -25,13 +25,6 @@ var serverStartTime time.Time
 
 const maxRetries = 5
 
-type Event struct {
-	key          string
-	eventType    string
-	namespace    string
-	resourceType string
-}
-
 type Descheduler struct {
 	clientset    kubernetes.Interface
 	queue        workqueue.RateLimitingInterface
@@ -40,7 +33,7 @@ type Descheduler struct {
 	podInformer  cache.SharedIndexInformer
 }
 
-func CreateDescheduler() (Descheduler, error) {
+func CreateDescheduler() (*Descheduler, error) {
 	conf := config.GetConfig()
 
 	kubeconfig := conf.KubeConfigFile
@@ -48,12 +41,10 @@ func CreateDescheduler() (Descheduler, error) {
 	client, err := client.CreateClient(kubeconfig)
 	if err != nil {
 		fmt.Println(err)
-		return Descheduler{}, err
+		return nil, err
 	}
 	// create a work queue
 	queue := workqueue.NewRateLimitingQueue(workqueue.DefaultControllerRateLimiter())
-
-	var newEvent Event
 
 	// create a node informer with node selector
 	nodeInformer := cache.NewSharedIndexInformer(
@@ -85,7 +76,7 @@ func CreateDescheduler() (Descheduler, error) {
 		0,
 		cache.Indexers{"byNamespace": cache.MetaNamespaceIndexFunc})
 
-	// create a pod informer
+	// create a pod informer, just used as cache, won't bind event handler.
 	podInformer := cache.NewSharedIndexInformer(
 		&cache.ListWatch{
 			ListFunc: func(options v1.ListOptions) (k8sruntime.Object, error) {
@@ -108,45 +99,36 @@ func CreateDescheduler() (Descheduler, error) {
 	}
 
 	err = timer.InitTimer(func() {
-		newEvent.eventType = "onTime"
-		newEvent.resourceType = "timer"
-		queue.Add(newEvent)
+		queue.Add(handler.NewEvent("", "onTime", "timer"))
 	})
 	if err != nil {
-		return Descheduler{}, err
+		return nil, err
 	}
 
 	nodeInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		// Only handle the update event, because all nodes get ready with a update event ultimately.
+		// Only handle the update event, because nodes get ready with an update event ultimately.
 		UpdateFunc: func(old, new interface{}) {
 			// Healthy nodes will push update event constantly.
 			// Push event only when pod is getting ready.
 			if !node.IsReady(old.(*api_v1.Node)) && node.IsReady(new.(*api_v1.Node)) {
-				newEvent.key, err = cache.MetaNamespaceKeyFunc(old)
-				newEvent.eventType = "getReady"
-				newEvent.resourceType = "node"
+				key, err := cache.MetaNamespaceKeyFunc(old)
 				if err == nil {
-					queue.Add(newEvent)
+					queue.Add(handler.NewEvent(key, "getReady", "node"))
 				}
 			}
 		},
 	})
 
 	rsInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		// Only handle the update event, because all nodes get ready with a update event ultimately.
+		// Only handle the update event, because replicaSet get ready with an update event.
 		UpdateFunc: func(old, new interface{}) {
-			// Healthy nodes will push update event constantly.
-			// Push event only when pod is getting ready.
-			newEvent.key, err = cache.MetaNamespaceKeyFunc(old)
-			newEvent.eventType = "rsUpdate"
-			newEvent.resourceType = "replicaSet"
+			key, err := cache.MetaNamespaceKeyFunc(old)
 			if err == nil {
-				queue.Add(newEvent)
+				queue.Add(handler.NewEvent(key, "rsUpdate", "replicaSet"))
 			}
 		},
 	})
-
-	return *descheduler, nil
+	return descheduler, nil
 }
 
 func (d *Descheduler) Run(stopCh chan struct{}) {
@@ -205,24 +187,7 @@ func (d *Descheduler) processNextItem() bool {
 
 	defer d.queue.Done(newEvent)
 
-	event := newEvent.(Event)
-	// Check trigger if any nodes become ready, or receive an event from timer,
-	// or replica sets has just recovered from last evictions.
-	if event.resourceType == "node" ||
-		event.resourceType == "timer" {
-		if trigger.IsTriggered(d.nodeInformer.GetIndexer()) {
-			d.processNodeItem(event)
-		}
-	}
+	event := newEvent.(handler.Event)
+	handler.Type(event).Handle(event)
 	return true
-}
-
-func (d *Descheduler) processNodeItem(newEvent Event) error {
-	nodes, err := node.GetReadyNodes(d.nodeInformer.GetIndexer())
-	if err != nil {
-		fmt.Println("Failed to get ready nodes:", err)
-		return err
-	}
-	fmt.Println(nodes)
-	return nil
 }
