@@ -4,10 +4,9 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/lentil1016/descheduler/pkg/client"
 	"github.com/lentil1016/descheduler/pkg/config"
 	"github.com/lentil1016/descheduler/pkg/handler"
-	"github.com/lentil1016/descheduler/pkg/node"
+	"github.com/lentil1016/descheduler/pkg/predictor"
 	"github.com/lentil1016/descheduler/pkg/timer"
 	apps_v1 "k8s.io/api/apps/v1"
 	api_v1 "k8s.io/api/core/v1"
@@ -25,7 +24,7 @@ var serverStartTime time.Time
 
 const maxRetries = 5
 
-type Descheduler struct {
+type descheduler struct {
 	clientset    kubernetes.Interface
 	queue        workqueue.RateLimitingInterface
 	nodeInformer cache.SharedIndexInformer
@@ -33,12 +32,16 @@ type Descheduler struct {
 	podInformer  cache.SharedIndexInformer
 }
 
-func CreateDescheduler() (*Descheduler, error) {
+type Descheduler interface {
+	Run(stopCh chan struct{})
+}
+
+func CreateDescheduler() (Descheduler, error) {
 	conf := config.GetConfig()
 
 	kubeconfig := conf.KubeConfigFile
 	fmt.Println("Using kubeconfig file:", kubeconfig)
-	client, err := client.CreateClient(kubeconfig)
+	client, err := CreateClient(kubeconfig)
 	if err != nil {
 		fmt.Println(err)
 		return nil, err
@@ -90,27 +93,12 @@ func CreateDescheduler() (*Descheduler, error) {
 		0,
 		cache.Indexers{"byNamespace": cache.MetaNamespaceIndexFunc})
 
-	descheduler := &Descheduler{
-		clientset:    client,
-		queue:        queue,
-		nodeInformer: nodeInformer,
-		rsInformer:   rsInformer,
-		podInformer:  podInformer,
-	}
-
-	err = timer.InitTimer(func() {
-		queue.Add(handler.NewEvent("", "onTime", "timer"))
-	})
-	if err != nil {
-		return nil, err
-	}
-
 	nodeInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		// Only handle the update event, because nodes get ready with an update event ultimately.
 		UpdateFunc: func(old, new interface{}) {
 			// Healthy nodes will push update event constantly.
 			// Push event only when pod is getting ready.
-			if !node.IsReady(old.(*api_v1.Node)) && node.IsReady(new.(*api_v1.Node)) {
+			if !predictor.IsNodeReady(old.(*api_v1.Node)) && predictor.IsNodeReady(new.(*api_v1.Node)) {
 				key, err := cache.MetaNamespaceKeyFunc(old)
 				if err == nil {
 					queue.Add(handler.NewEvent(key, "getReady", "node"))
@@ -128,10 +116,28 @@ func CreateDescheduler() (*Descheduler, error) {
 			}
 		},
 	})
-	return descheduler, nil
+
+	err = timer.InitTimer(func() {
+		queue.Add(handler.NewEvent("", "onTime", "timer"))
+	})
+	if err != nil {
+		return nil, err
+	}
+
+	predictor.Init(nodeInformer.GetIndexer(),
+		rsInformer.GetIndexer(),
+		podInformer.GetIndexer())
+
+	return &descheduler{
+		clientset:    client,
+		queue:        queue,
+		nodeInformer: nodeInformer,
+		rsInformer:   rsInformer,
+		podInformer:  podInformer,
+	}, nil
 }
 
-func (d *Descheduler) Run(stopCh chan struct{}) {
+func (d *descheduler) Run(stopCh chan struct{}) {
 	defer runtime.HandleCrash()
 	defer d.queue.ShutDown()
 
@@ -173,18 +179,17 @@ func (d *Descheduler) Run(stopCh chan struct{}) {
 	wait.Until(d.runWorker, time.Second, stopCh)
 }
 
-func (d *Descheduler) runWorker() {
+func (d *descheduler) runWorker() {
 	for d.processNextItem() {
 		// continue looping
 	}
 }
 
-func (d *Descheduler) processNextItem() bool {
+func (d *descheduler) processNextItem() bool {
 	newEvent, quit := d.queue.Get()
 	if quit {
 		return false
 	}
-
 	defer d.queue.Done(newEvent)
 
 	event := newEvent.(handler.Event)

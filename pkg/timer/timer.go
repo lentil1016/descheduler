@@ -3,21 +3,24 @@ package timer
 import (
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/lentil1016/descheduler/pkg/config"
 )
 
 var outOfTime bool
+var outOfTimeMutex sync.Mutex
 var duration time.Duration
-
 var pushEvent func()
 
 func InitTimer(pushEventHandle func()) error {
 	// Set the function which will be called when timer starts.
 	pushEvent = pushEventHandle
 
-	// Disabled trigger first
+	// Disabled trigger first.
+	// Is ok to Set `outOfTime` without Lock here because worker are not running yet.
+	// There is no race condition during this method.
 	outOfTime = true
 	conf := config.GetConfig()
 	if conf.Triggers.Mode == "time" {
@@ -52,12 +55,20 @@ func runTimerAt(hour int, min int) {
 		if curHour, curMin, _ := time.Now().Clock(); curHour == hour && curMin == min {
 			timer := time.NewTimer(duration)
 			fmt.Printf("Timer started at %v:%v, last for %v\n", hour, min, duration.String())
-			outOfTime = false
+			{
+				outOfTimeMutex.Lock()
+				outOfTime = false
+				outOfTimeMutex.Unlock()
+			}
 			pushEvent()
 			// wait util timer stopped
 			<-timer.C
-			outOfTime = true
-			fmt.Println("Time stopped")
+			{
+				outOfTimeMutex.Lock()
+				outOfTime = true
+				outOfTimeMutex.Unlock()
+			}
+			fmt.Println("Timer stopped")
 		} else {
 			time.Sleep(20 * time.Second)
 		}
