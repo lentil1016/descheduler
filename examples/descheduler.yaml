@@ -1,6 +1,6 @@
 apiVersion: descheduler.lentil1016.cn/v1alpha1
 spec:
-    tiggers:
+    triggers:
         allReplicasOnOneNode: true
         maxGiniPercentage:
             cpu: 50
@@ -8,8 +8,8 @@ spec:
         maxSparedPercentage:
             cpu: 80
             memory: 80
-        on: "time"
-        # On: "event"
+        mode: "time"
+        # mode: "event"
         time:
             from: 10:00PM
             for: "1h"

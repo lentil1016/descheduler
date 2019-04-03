@@ -7,6 +7,8 @@ import (
 	"github.com/lentil1016/descheduler/pkg/client"
 	"github.com/lentil1016/descheduler/pkg/config"
 	"github.com/lentil1016/descheduler/pkg/node"
+	"github.com/lentil1016/descheduler/pkg/timer"
+	"github.com/lentil1016/descheduler/pkg/trigger"
 	apps_v1 "k8s.io/api/apps/v1"
 	api_v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -38,10 +40,8 @@ type Descheduler struct {
 	podInformer  cache.SharedIndexInformer
 }
 
-var conf config.ConfigSpec
-
 func CreateDescheduler() (Descheduler, error) {
-	conf = config.GetConfig()
+	conf := config.GetConfig()
 
 	kubeconfig := conf.KubeConfigFile
 	fmt.Println("Using kubeconfig file:", kubeconfig)
@@ -105,6 +105,15 @@ func CreateDescheduler() (Descheduler, error) {
 		nodeInformer: nodeInformer,
 		rsInformer:   rsInformer,
 		podInformer:  podInformer,
+	}
+
+	err = timer.InitTimer(func() {
+		newEvent.eventType = "onTime"
+		newEvent.resourceType = "timer"
+		queue.Add(newEvent)
+	})
+	if err != nil {
+		return Descheduler{}, err
 	}
 
 	nodeInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
@@ -174,8 +183,10 @@ func (d *Descheduler) Run(stopCh chan struct{}) {
 			return
 		}
 	}
-
 	fmt.Println("descheduler synced and ready")
+
+	// Timer will start if descheduler is configred as time triggered mode
+	timer.RunTimer()
 
 	wait.Until(d.runWorker, time.Second, stopCh)
 }
@@ -194,10 +205,13 @@ func (d *Descheduler) processNextItem() bool {
 
 	defer d.queue.Done(newEvent)
 
-	if newEvent.(Event).resourceType == "node" {
-		err := d.processNodeItem(newEvent.(Event))
-		if err != nil {
-			return false
+	event := newEvent.(Event)
+	// Check trigger if any nodes become ready, or receive an event from timer,
+	// or replica sets has just recovered from last evictions.
+	if event.resourceType == "node" ||
+		event.resourceType == "timer" {
+		if trigger.IsTriggered(d.nodeInformer.GetIndexer()) {
+			d.processNodeItem(event)
 		}
 	}
 	return true

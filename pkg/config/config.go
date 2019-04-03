@@ -20,7 +20,7 @@ type config struct {
 type ConfigSpec struct {
 	KubeConfigFile string         `yaml: kubeconfig`
 	DryRun         bool           `yaml: dryRun`
-	Triggers       ConfigTriggers `yaml: tiggers`
+	Triggers       ConfigTriggers `yaml: triggers`
 	Rules          ConfigRules    `yaml: rules`
 }
 
@@ -28,7 +28,7 @@ type ConfigTriggers struct {
 	AllReplicasOnOneNode bool                     `yaml: allReplicasOnOneNode` // If all pods(more than one) of a replicaSet run on one single node, evict one of them.
 	MaxGiniPercentage    ConfigResourcePercentage `yaml: maxGiniPercentage`
 	MaxSparedPercentage  ConfigResourcePercentage `yaml: maxSparedPercentage`
-	On                   string                   `yaml: on`
+	Mode                 string                   `yaml: mode`
 	Time                 ConfigTime               `yaml: time`
 }
 
@@ -43,13 +43,13 @@ type ConfigTime struct {
 }
 
 type ConfigRules struct {
-	HardEviction      bool     `yaml: hardEviction`      // Evicting a pod when it's the only replica of the replicaSet it belongs.
-	WorkingNamespaces []string `yaml: workingNamespaces` // Namespaces that descheduler will affect to, an empty slice indicates all namespaces
-	NodeSelector      string   `yaml: nodeSelector`      // Selectors of the nodes that descheduler will affect to, nil indicates all nodes.
+	HardEviction     bool     `yaml: hardEviction`     // Evicting a pod when it's the only replica of the replicaSet it belongs.
+	AffectNamespaces []string `yaml: affectNamespaces` // Namespaces that descheduler will affect to, an empty slice indicates all namespaces
+	NodeSelector     string   `yaml: nodeSelector`     // Selectors of the nodes that descheduler will affect to, nil indicates all nodes.
 }
 
 func setDefaults() {
-	var defaultFromTime, _ = time.Parse("11:00PM", "11:00PM")
+	var defaultFromTime = time.Now()
 
 	var defaultConf = ConfigSpec{
 		DryRun: false,
@@ -63,16 +63,16 @@ func setDefaults() {
 				CPU:    80,
 				Memory: 80,
 			},
-			On: "event",
+			Mode: "event",
 			Time: ConfigTime{
 				From: defaultFromTime,
 				For:  "1h",
 			},
 		},
 		Rules: ConfigRules{
-			HardEviction:      false,
-			WorkingNamespaces: []string{},
-			NodeSelector:      "",
+			HardEviction:     false,
+			AffectNamespaces: []string{},
+			NodeSelector:     "",
 		},
 	}
 
@@ -82,11 +82,11 @@ func setDefaults() {
 	viper.SetDefault("spec.triggers.maxGiniPercentage.memory", defaultConf.Triggers.MaxGiniPercentage.Memory)
 	viper.SetDefault("spec.triggers.maxSparedPercentage.cpu", defaultConf.Triggers.MaxSparedPercentage.CPU)
 	viper.SetDefault("spec.triggers.maxSparedPercentage.memory", defaultConf.Triggers.MaxSparedPercentage.Memory)
-	viper.SetDefault("spec.triggers.on", defaultConf.Triggers.On)
+	viper.SetDefault("spec.triggers.mode", defaultConf.Triggers.Mode)
 	viper.SetDefault("spec.triggers.time.from", defaultConf.Triggers.Time.From)
 	viper.SetDefault("spec.triggers.time.for", defaultConf.Triggers.Time.For)
 	viper.SetDefault("spec.rules.hardEviction", defaultConf.Rules.HardEviction)
-	viper.SetDefault("spec.rules.affectNamespaces", defaultConf.Rules.WorkingNamespaces)
+	viper.SetDefault("spec.rules.affectNamespaces", defaultConf.Rules.AffectNamespaces)
 	viper.SetDefault("spec.rules.nodeSelector", defaultConf.Rules.NodeSelector)
 }
 
@@ -145,16 +145,16 @@ func GetConfig() ConfigSpec {
 				CPU:    viper.GetInt("spec.triggers.maxSparedPercentage.cpu"),
 				Memory: viper.GetInt("spec.triggers.maxSparedPercentage.memory"),
 			},
-			On: viper.GetString("spec.triggers.on"),
+			Mode: viper.GetString("spec.triggers.mode"),
 			Time: ConfigTime{
 				From: viper.GetTime("spec.triggers.time.from"),
 				For:  viper.GetString("spec.triggers.time.for"),
 			},
 		},
 		Rules: ConfigRules{
-			HardEviction:      viper.GetBool("spec.rules.hardEviction"),
-			WorkingNamespaces: viper.GetStringSlice("spec.rules.workingNamespaces"),
-			NodeSelector:      viper.GetString("spec.rules.nodeSelector"),
+			HardEviction:     viper.GetBool("spec.rules.hardEviction"),
+			AffectNamespaces: viper.GetStringSlice("spec.rules.affectNamespaces"),
+			NodeSelector:     viper.GetString("spec.rules.nodeSelector"),
 		},
 	}
 }
