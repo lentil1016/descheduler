@@ -12,7 +12,7 @@ type descheduleHandler struct {
 
 func (dh *descheduleHandler) Handle(event Event) {
 	if timer.IsOutOfTime() {
-		fmt.Println("Deschedule event aborted by timer.")
+		fmt.Println("Deschedule event aborted by timer")
 		return
 	}
 
@@ -21,12 +21,15 @@ func (dh *descheduleHandler) Handle(event Event) {
 	if !ok {
 		return
 	}
-	fmt.Println("descheduleHandler: Deschedule Triggered, start picking Pods.")
-	_, err := predictor.GetEvictablePods(busyNodes)
+	fmt.Println("descheduleHandler: Deschedule Triggered, start picking Pods")
+	evictSize := 2
+	pods, err := predictor.GetEvictPods(busyNodes, evictSize)
 	if err != nil {
 		fmt.Println(err)
 		return
 	}
+	fmt.Println("descheduleHandler: Pods picking done, start to evict")
+	predictor.Evict(pods)
 	isRecovering = true
 	fmt.Println("deschedule event handled")
 }

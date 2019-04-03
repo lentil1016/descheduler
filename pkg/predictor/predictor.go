@@ -54,3 +54,35 @@ func scoreResource(usage, maxUsage, maxSpared, usageScore, sparedScore, normalSc
 	}
 	return usageScore, sparedScore, normalScore
 }
+
+// SupportEviction uses Discovery API to find out if the server support eviction subresource
+// If support, it will return its groupVersion; Otherwise, it will return ""
+func supportEviction() (string, error) {
+	discoveryClient := client.Discovery()
+	groupList, err := discoveryClient.ServerGroups()
+	if err != nil {
+		return "", err
+	}
+	foundPolicyGroup := false
+	var policyGroupVersion string
+	for _, group := range groupList.Groups {
+		if group.Name == "policy" {
+			foundPolicyGroup = true
+			policyGroupVersion = group.PreferredVersion.GroupVersion
+			break
+		}
+	}
+	if !foundPolicyGroup {
+		return "", nil
+	}
+	resourceList, err := discoveryClient.ServerResourcesForGroupVersion("v1")
+	if err != nil {
+		return "", err
+	}
+	for _, resource := range resourceList.APIResources {
+		if resource.Name == "pods/eviction" && resource.Kind == "Eviction" {
+			return policyGroupVersion, nil
+		}
+	}
+	return "", nil
+}

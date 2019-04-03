@@ -208,12 +208,6 @@
 			"revisionTime": "2019-03-13T11:33:46Z"
 		},
 		{
-			"checksumSHA1": "cS79I6+UXzEETFd1zHHITsfJLKc=",
-			"path": "github.com/kubernetes/kubernetes/pkg/kubelet/types",
-			"revision": "66674f549626cc41f04e475d2c0e865116c4cd40",
-			"revisionTime": "2019-03-20T02:01:17Z"
-		},
-		{
 			"checksumSHA1": "1ott3ehyvBPpWmJx6G2vEFSocmQ=",
 			"path": "github.com/magiconair/properties",
 			"revision": "7c38529aac7222391b7a2661365177a97e21b998",
@@ -957,17 +951,17 @@
 		},
 		{
 			"checksumSHA1": "Ejl2IQY0O2bawpQ7e5GfUfKqEu4=",
-			"origin": "github.com/kubernetes/kubernetes/vendor/k8s.io/apiserver/pkg/util/feature",
+			"origin": "k8s.io/kubernetes/vendor/k8s.io/apiserver/pkg/util/feature",
 			"path": "k8s.io/apiserver/pkg/util/feature",
-			"revision": "66674f549626cc41f04e475d2c0e865116c4cd40",
-			"revisionTime": "2019-03-20T02:01:17Z"
+			"revision": "8b98e802eddb9f478ff7d991a2f72f60c165388a",
+			"revisionTime": "2019-01-27T19:03:18Z"
 		},
 		{
 			"checksumSHA1": "5KZOWDvq3GS7w6/TSafHT40FnRM=",
-			"origin": "github.com/kubernetes/kubernetes/vendor/k8s.io/apiserver/pkg/util/feature/testing",
+			"origin": "k8s.io/kubernetes/vendor/k8s.io/apiserver/pkg/util/feature/testing",
 			"path": "k8s.io/apiserver/pkg/util/feature/testing",
-			"revision": "66674f549626cc41f04e475d2c0e865116c4cd40",
-			"revisionTime": "2019-03-20T02:01:17Z"
+			"revision": "8b98e802eddb9f478ff7d991a2f72f60c165388a",
+			"revisionTime": "2019-01-27T19:03:18Z"
 		},
 		{
 			"checksumSHA1": "LLqG+6aFkPwUqzfHu7NffRooerQ=",
@@ -1368,6 +1362,12 @@
 		{
 			"checksumSHA1": "Avr7/xjq10zZU5EHTJ841b2s+pk=",
 			"path": "k8s.io/kubernetes/pkg/features",
+			"revision": "8b98e802eddb9f478ff7d991a2f72f60c165388a",
+			"revisionTime": "2019-01-27T19:03:18Z"
+		},
+		{
+			"checksumSHA1": "/uKb9ZhEnnzaLWXvx39irUHi+pw=",
+			"path": "k8s.io/kubernetes/pkg/kubelet/types",
 			"revision": "8b98e802eddb9f478ff7d991a2f72f60c165388a",
 			"revisionTime": "2019-01-27T19:03:18Z"
 		},
