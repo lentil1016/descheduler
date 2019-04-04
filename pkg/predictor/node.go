@@ -19,11 +19,12 @@ type nodeScore struct {
 // Splite node into high spared nodes list and low spared state nodes list
 func GetBusyNodes() ([]*api_v1.Node, bool) {
 	operatableNodes, _ := getOperatableNodes()
-	if len(operatableNodes) < 2 {
+	// TODO: remove comment
+	/*if len(operatableNodes) < 2 {
 		fmt.Println("Deschedule event droped because Operatable node is less than 2")
 		return []*api_v1.Node{}, []*api_v1.Node{}, false
 	}
-
+	*/
 	// ranking nodes by most spared and most usage
 	var sparedRank, usageRank, normalRank []nodeScore
 	for _, node := range operatableNodes {
@@ -76,10 +77,20 @@ func GetBusyNodes() ([]*api_v1.Node, bool) {
 			return []*api_v1.Node{}, false
 		}
 	} else if len(usageNodes) == 0 {
-		fmt.Println("All nodes reserved sufficient resource. Try deschedule anyway.")
-		return normalNodes, true
+		// TODO: remove comment
+		/*if len(sparedNodes) == 0 {
+			fmt.Println("Deschedule event aborted, all nodes are normal, nothing to deschedule")
+			return []*api_v1.Node{}, false
+		} else*/{
+			fmt.Println("All nodes reserved sufficient resource. Try deschedule anyway.")
+			return normalNodes, true
+		}
 	}
 	return usageNodes, true
+}
+
+func IsNodeReady(node *api_v1.Node) bool {
+	return isNodeOperatable(node) && isNodeSchedulable(node)
 }
 
 func getNodeUsage(node *api_v1.Node) (float64, float64, float64, error) {
@@ -114,6 +125,11 @@ func getNodeUsage(node *api_v1.Node) (float64, float64, float64, error) {
 	return cpuUsage, memUsage, podUsage, nil
 }
 
+func getPodNode(pod *api_v1.Pod) (*api_v1.Node, error) {
+	node, err := nodeLister.Get(pod.Spec.NodeName)
+	return node, err
+}
+
 func getOperatableNodes() ([]*api_v1.Node, error) {
 	// Get all nodes
 	var nodes []*api_v1.Node
@@ -132,10 +148,6 @@ func getOperatableNodes() ([]*api_v1.Node, error) {
 		}
 	}
 	return nodes, nil
-}
-
-func IsNodeReady(node *api_v1.Node) bool {
-	return isNodeOperatable(node) && isNodeSchedulable(node)
 }
 
 func isNodeOperatable(node *api_v1.Node) bool {

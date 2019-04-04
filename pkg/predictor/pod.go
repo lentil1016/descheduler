@@ -3,6 +3,7 @@ package predictor
 import (
 	"fmt"
 
+	"github.com/lentil1016/descheduler/pkg/predicates"
 	api_v1 "k8s.io/api/core/v1"
 	policy "k8s.io/api/policy/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
@@ -12,7 +13,8 @@ import (
 	"k8s.io/kubernetes/pkg/kubelet/types"
 )
 
-func GetEvictPods(nodes []*api_v1.Node, evictSize int) ([]*api_v1.Pod, error) {
+// get evictable pods and rank them, then get the dedired number of pods to evict
+func GetEvictPods(nodes []*api_v1.Node) ([]*api_v1.Pod, error) {
 	var evictPods []*api_v1.Pod
 	for _, node := range nodes {
 		pods, err := getEvictablePods(node)
@@ -21,7 +23,8 @@ func GetEvictPods(nodes []*api_v1.Node, evictSize int) ([]*api_v1.Pod, error) {
 		}
 		rankedPods := rankEvictablePods(pods)
 		evictPods = append(evictPods, rankedPods...)
-		if len(evictPods) >= evictSize {
+		if len(evictPods) >= conf.Rules.MaxEvictSize {
+			fmt.Printf("maxEvictSize decide only top %v pods that marked as evict will be evicted.\n", evictSize)
 			evictPods = evictPods[:evictSize]
 			break
 		}
@@ -30,15 +33,77 @@ func GetEvictPods(nodes []*api_v1.Node, evictSize int) ([]*api_v1.Pod, error) {
 }
 
 func rankEvictablePods(pods []*api_v1.Pod) []*api_v1.Pod {
-	return pods
+	evicts := []*api_v1.Pod{}
+	remains, newEvicts := evictUnfitPods(pods)
+	evicts = append(evicts, newEvicts...)
+	remains, newEvicts = evictWithPeerOnOneNode(remains)
+	evicts = append(evicts, newEvicts...)
+	remains, newEvicts = evictWithPeer(remains)
+	evicts = append(evicts, newEvicts...)
+	return evicts
 }
 
-func getUnfitPods(node *api_v1.Node) []*api_v1.Pod {
-	return []*api_v1.Pod{}
+// check if there is pod unfit its node, then mark as evicted
+func evictUnfitPods(pods []*api_v1.Pod) (remainPods, evictPods []*api_v1.Pod) {
+	var remains, evicts []*api_v1.Pod
+	for _, pod := range pods {
+		if pod.Spec.Affinity != nil &&
+			pod.Spec.Affinity.NodeAffinity != nil &&
+			pod.Spec.Affinity.NodeAffinity.RequiredDuringSchedulingIgnoredDuringExecution != nil &&
+			!podFitsCurrentNode(pod) && podFitsAnySchedulableNode(pod) {
+			// Pod have node affinity and can find a prefered node
+			fmt.Printf("Find prefered node. %v marked as evicted\n", pod.Name)
+			evicts = append(evicts, pod)
+		} else {
+			remains = append(remains, pod)
+		}
+	}
+	return remains, evicts
 }
 
-func getPodsHaveReplicas(node *api_v1.Node) []*api_v1.Pod {
-	return []*api_v1.Pod{}
+func podFitsCurrentNode(pod *api_v1.Pod) bool {
+	node, err := getPodNode(pod)
+	if err != nil {
+		fmt.Println("Get pod node failed, skipping process this pod", pod.Name, err)
+		return true
+	}
+	ok, err := predicates.PodMatchNodeSelector(pod, node)
+
+	if err != nil {
+		fmt.Printf("Check if pod fit Current node failed, %v\n", err)
+		return false
+	}
+
+	if !ok {
+		fmt.Printf("Pod %v does not fit on node %v\n", pod.Name, node.Name)
+		return false
+	}
+
+	fmt.Printf("Pod %v fits on node %v\n", pod.Name, node.Name)
+	return true
+}
+
+func podFitsAnySchedulableNode(pod *api_v1.Pod) bool {
+
+	nodes, err := getOperatableNodes()
+	if err != nil {
+		fmt.Println("Get operatable nodes failed, ", err)
+	}
+
+	for _, node := range nodes {
+		ok, err := predicates.PodMatchNodeSelector(pod, node)
+		if err != nil || !ok {
+			continue
+		}
+		if ok {
+			if isNodeSchedulable(node) {
+				fmt.Printf("Pod %v can possibly be scheduled on %v\n", pod.Name, node.Name)
+				return true
+			}
+			return false
+		}
+	}
+	return false
 }
 
 func getEvictablePods(node *api_v1.Node) ([]*api_v1.Pod, error) {
@@ -52,7 +117,7 @@ func getEvictablePods(node *api_v1.Node) ([]*api_v1.Pod, error) {
 			continue
 		} else {
 			evictablePods = append(evictablePods, pod)
-			fmt.Println("Found pod that evictable: ", pod.ObjectMeta.Name)
+			fmt.Println("Found pod that evictable:", pod.ObjectMeta.Name)
 		}
 	}
 	return evictablePods, nil
@@ -137,6 +202,7 @@ func getPods(fieldSelector fields.Selector) ([]*api_v1.Pod, error) {
 
 func Evict(pods []*api_v1.Pod) {
 	for _, pod := range pods {
+		fmt.Println("Executing pod's eviction:", pod.ObjectMeta.Name)
 		evictPod(pod)
 	}
 }

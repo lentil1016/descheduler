@@ -16,9 +16,9 @@ func (rh *recoverHandler) Handle(event Event) {
 			delete(recoveringMap, rs.ObjectMeta.Name)
 			if len(recoveringMap) == 0 {
 				isRecovering = false
-				fmt.Println("recover event handled")
+				fmt.Println("recoverHandler: ReplicaSets that been evicted have now recovered")
 			} else {
-				fmt.Printf("Received replica set %v recover event. Still waiting for %v replica sets recovering\n", rs.ObjectMeta.Name, len(recoveringMap))
+				fmt.Printf("recoverHandler: Received ReplicaSet %v recover event. Still waiting for %v replica sets recovering\n", rs.ObjectMeta.Name, len(recoveringMap))
 			}
 		}
 	}

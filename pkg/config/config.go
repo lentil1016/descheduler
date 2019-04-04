@@ -47,6 +47,7 @@ type ConfigRules struct {
 	HardEviction     bool     `yaml: hardEviction`     // Evicting a pod when it's the only replica of the replicaSet it belongs.
 	AffectNamespaces []string `yaml: affectNamespaces` // Namespaces that descheduler will affect to, an empty slice indicates all namespaces
 	NodeSelector     string   `yaml: nodeSelector`     // Selectors of the nodes that descheduler will affect to, nil indicates all nodes.
+	MaxEvictSize     int      `yaml: maxEvictSize`     // Number of the Pod in one deschedule term will be evicted at most.
 }
 
 func setDefaults() {
@@ -76,6 +77,7 @@ func setDefaults() {
 			HardEviction:     false,
 			AffectNamespaces: []string{},
 			NodeSelector:     "",
+			MaxEvictSize:     3,
 		},
 	}
 
@@ -93,6 +95,7 @@ func setDefaults() {
 	viper.SetDefault("spec.rules.hardEviction", defaultConf.Rules.HardEviction)
 	viper.SetDefault("spec.rules.affectNamespaces", defaultConf.Rules.AffectNamespaces)
 	viper.SetDefault("spec.rules.nodeSelector", defaultConf.Rules.NodeSelector)
+	viper.SetDefault("spec.rules.maxEvictSize", defaultConf.Rules.MaxEvictSize)
 }
 
 func InitConfig(configFile string, kubeConfigFile string, dryRun bool) {
@@ -162,6 +165,7 @@ func GetConfig() ConfigSpec {
 			HardEviction:     viper.GetBool("spec.rules.hardEviction"),
 			AffectNamespaces: viper.GetStringSlice("spec.rules.affectNamespaces"),
 			NodeSelector:     viper.GetString("spec.rules.nodeSelector"),
+			MaxEvictSize:     viper.GetInt("spec.rules.maxEvictSize"),
 		},
 	}
 }

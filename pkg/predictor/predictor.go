@@ -4,6 +4,7 @@ import (
 	"github.com/lentil1016/descheduler/pkg/config"
 	"k8s.io/client-go/kubernetes"
 	lister_appv1 "k8s.io/client-go/listers/apps/v1"
+	lister_apiv1 "k8s.io/client-go/listers/core/v1"
 	"k8s.io/client-go/tools/cache"
 )
 
@@ -15,6 +16,7 @@ type indexersType struct {
 var indexers indexersType
 var client kubernetes.Interface
 var conf config.ConfigSpec
+var nodeLister lister_apiv1.NodeLister
 var rsLister lister_appv1.ReplicaSetLister
 
 func Init(nodeIndexer, rsIndexer cache.Indexer, clientset kubernetes.Interface) {
@@ -24,6 +26,7 @@ func Init(nodeIndexer, rsIndexer cache.Indexer, clientset kubernetes.Interface) 
 	}
 	client = clientset
 	conf = config.GetConfig()
+	nodeLister = lister_apiv1.NewNodeLister(nodeIndexer)
 	rsLister = lister_appv1.NewReplicaSetLister(rsIndexer)
 }
 

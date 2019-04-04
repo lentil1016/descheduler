@@ -19,3 +19,4 @@ spec:
         hardEviction: false
         affectNamespaces: ["default"]
         nodeSelector: ""
+        maxEvictSize: 4

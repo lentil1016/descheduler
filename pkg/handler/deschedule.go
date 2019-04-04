@@ -33,7 +33,9 @@ func (dh *descheduleHandler) Handle(event Event) {
 	recoveringMap = make(map[string]bool, len(pods))
 	for _, pod := range pods {
 		rsName := predictor.GetPodReplicaSetName(pod)
-		recoveringMap[rsName] = true
+		if rsName != "" {
+			recoveringMap[rsName] = true
+		}
 	}
 	isRecovering = true
 	fmt.Println("descheduleHandler: Eviction is finished, waiting for recovering")

@@ -54,6 +54,12 @@
 			"revisionTime": "2018-08-29T12:54:49Z"
 		},
 		{
+			"checksumSHA1": "yUc84k7cfnRi9AlPFuRo77Y18Og=",
+			"path": "github.com/golang/glog",
+			"revision": "23def4e6c14b4da8ac2ed8007337bc5eb5007998",
+			"revisionTime": "2016-01-25T20:49:56Z"
+		},
+		{
 			"checksumSHA1": "Bra/9XucW0ivjIalL27XqSw2dTk=",
 			"origin": "k8s.io/apimachinery/vendor/github.com/golang/groupcache/lru",
 			"path": "github.com/golang/groupcache/lru",
@@ -1240,6 +1246,12 @@
 			"revisionTime": "2019-02-12T20:39:40Z"
 		},
 		{
+			"checksumSHA1": "eo9HuDZ9dFquG7o5S4hfj20wkmE=",
+			"path": "k8s.io/client-go/listers/core/v1",
+			"revision": "1b476292615b7921740d8d0f0c4ce1bc23a72791",
+			"revisionTime": "2019-02-12T20:39:40Z"
+		},
+		{
 			"checksumSHA1": "xzgS2YeBsvo8tnz4nbRiv3gcedw=",
 			"path": "k8s.io/client-go/pkg/apis/clientauthentication",
 			"revision": "1b476292615b7921740d8d0f0c4ce1bc23a72791",
@@ -1412,6 +1424,18 @@
 			"path": "k8s.io/kubernetes/pkg/apis/core",
 			"revision": "8b98e802eddb9f478ff7d991a2f72f60c165388a",
 			"revisionTime": "2019-01-27T19:03:18Z"
+		},
+		{
+			"checksumSHA1": "YzEYfmqtwT7YFhQIXzpYHDgtA4M=",
+			"path": "k8s.io/kubernetes/pkg/apis/core/helper",
+			"revision": "445a373458f6cc511e672535715decac196cb709",
+			"revisionTime": "2019-04-03T21:55:37Z"
+		},
+		{
+			"checksumSHA1": "6kveKVKdOqDP59BEg1S20pjlMc8=",
+			"path": "k8s.io/kubernetes/pkg/apis/core/v1/helper",
+			"revision": "445a373458f6cc511e672535715decac196cb709",
+			"revisionTime": "2019-04-03T21:55:37Z"
 		},
 		{
 			"checksumSHA1": "4TQMiCMg6RGD6gku0+XbrwAAklk=",
