@@ -1,4 +1,5 @@
 [![CircleCI](https://circleci.com/gh/lentil1016/descheduler.svg?style=svg)](https://circleci.com/gh/lentil1016/descheduler) [![Go Report Card](https://goreportcard.com/badge/github.com/lentil1016/descheduler)](https://goreportcard.com/report/github.com/lentil1016/descheduler)
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Flentil1016%2Fdescheduler.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Flentil1016%2Fdescheduler?ref=badge_shield)
 
 # descheduler
 A descheduler server for kubernetes cluster.
@@ -26,3 +27,7 @@ It says you can get the nutrition you need from either food or pills, and I beli
   - the pods that can find prefered node
   - the pods with peer pods(pods created by the same SeplicaSet) on the same node
   - the pods with peer pods in cluster
+
+
+## License
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Flentil1016%2Fdescheduler.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2Flentil1016%2Fdescheduler?ref=badge_large)
