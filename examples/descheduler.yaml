@@ -1,7 +1,6 @@
 apiVersion: descheduler.lentil1016.cn/v1alpha1
 spec:
     triggers:
-        allReplicasOnOneNode: true
         minSparedPercentage:
             cpu: 30
             memory: 30
@@ -16,7 +15,5 @@ spec:
             from: 10:00PM
             for: "1h"
     rules:
-        hardEviction: false
-        affectNamespaces: ["default"]
         nodeSelector: ""
         maxEvictSize: 4

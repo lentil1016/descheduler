@@ -21,7 +21,7 @@ func GetBusyNodes() ([]*api_v1.Node, bool) {
 	operatableNodes, _ := getOperatableNodes()
 	if len(operatableNodes) < 2 {
 		fmt.Println("Deschedule event droped because Operatable node is less than 2")
-		return []*api_v1.Node{}, []*api_v1.Node{}, false
+		return []*api_v1.Node{}, false
 	}
 	// ranking nodes by most spared and most usage
 	var sparedRank, usageRank, normalRank []nodeScore
