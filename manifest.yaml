@@ -1,0 +1,121 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  labels:
+    k8s-app: descheduler
+  name: system:descheduler
+rules:
+- apiGroups:
+  - ''
+  resources:
+  - 'nodes'
+  - 'pods'
+  verbs:
+  - 'get'
+  - 'list'
+  - 'watch'
+- apiGroups:
+  - 'apps'
+  resources:
+  - 'replicasets'
+  verbs:
+  - 'list'
+  - 'watch'
+- apiGroups:
+  - 'policy'
+  resources:
+  - 'poddisruptionbudgets/status'
+  verbs:
+  - 'update'
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  labels:
+    k8s-app: descheduler
+  name: descheduler-service-account
+  namespace: kube-system
+---
+apiVersion: rbac.authorization.k8s.io/v1beta1
+kind: ClusterRoleBinding
+metadata:
+  name: descheduler
+  labels:
+    k8s-app: descheduler
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: system:descheduler
+subjects:
+- kind: ServiceAccount
+  name: descheduler-service-account
+  namespace: kube-system
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    k8s-app: descheduler
+  name: descheduler
+  namespace: kube-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      run: descheduler
+  template:
+    metadata:
+      labels:
+        run: descheduler
+    spec:
+      containers:
+      - image: lentil1016/descheduler
+        name: descheduler
+        volumeMounts:
+        - name: descheduler-conf
+          mountPath: /root/.descheduler.yaml
+          subPath: descheduler.yaml
+        resources:
+          requests:
+            memory: "200Mi"
+            cpu: "100m"
+          limits:
+            memory: "200Mi"
+            cpu: "100m"
+      serviceAccountName: descheduler-service-account
+      volumes:
+      - name: descheduler-conf
+        configMap:
+          name: descheduler-conf
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    k8s-app: descheduler
+  name: descheduler-conf
+  namespace: kube-system
+data:
+  descheduler.yaml: |-
+    apiVersion: descheduler.lentil1016.cn/v1alpha1
+    spec:
+        triggers:
+            allReplicasOnOneNode: true
+            minSparedPercentage:
+                cpu: 30
+                memory: 30
+                pod: 30
+            maxSparedPercentage:
+                cpu: 100
+                memory: 100
+                pod: 100
+            mode: "event"
+            # mode: "event"
+            time:
+                from: 10:00PM
+                for: "1h"
+        rules:
+            hardEviction: false
+            affectNamespaces: ["default"]
+            nodeSelector: ""
+            maxEvictSize: 4
