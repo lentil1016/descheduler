@@ -15,6 +15,7 @@ func doDescheduleCmd(cmd *cobra.Command, args []string) {
 	d, err := descheduler.CreateDescheduler()
 	if err != nil {
 		fmt.Println(err)
+		return
 	}
 
 	stopCh := make(chan struct{})
