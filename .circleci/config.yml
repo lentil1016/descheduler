@@ -6,4 +6,4 @@ jobs:
     working_directory: /go/src/github.com/lentil1016/descheduler
     steps:
       - checkout
-      - run: go get -v -t -d ./...
+      - run: go get -v github.com/lentil1016/descheduler
