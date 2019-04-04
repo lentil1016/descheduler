@@ -75,6 +75,11 @@ func runTimerAt(hour int, min int) {
 	}
 }
 
+func PushTimerEventAfter(duration time.Duration) {
+	time.Sleep(duration)
+	pushEvent()
+}
+
 func IsOutOfTime() bool {
 	return outOfTime
 }

@@ -71,6 +71,7 @@ func evictWithPeer(pods []*api_v1.Pod) (remainPods, evictPods []*api_v1.Pod) {
 			remains = append(remains, pod)
 		}
 	}
+	return remains, evicts
 }
 
 func GetPodReplicaSetName(pod *api_v1.Pod) string {

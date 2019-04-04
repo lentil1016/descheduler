@@ -22,8 +22,7 @@ func (dh *descheduleHandler) Handle(event Event) {
 		return
 	}
 	fmt.Println("descheduleHandler: Deschedule Triggered, start picking Pods")
-	evictSize := 2
-	pods, err := predictor.GetEvictPods(busyNodes, evictSize)
+	pods, err := predictor.GetEvictPods(busyNodes)
 	if err != nil {
 		fmt.Println(err)
 		return

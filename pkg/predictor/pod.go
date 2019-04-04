@@ -15,6 +15,7 @@ import (
 
 // get evictable pods and rank them, then get the dedired number of pods to evict
 func GetEvictPods(nodes []*api_v1.Node) ([]*api_v1.Pod, error) {
+	evictSize := conf.Rules.MaxEvictSize
 	var evictPods []*api_v1.Pod
 	for _, node := range nodes {
 		pods, err := getEvictablePods(node)
@@ -23,7 +24,7 @@ func GetEvictPods(nodes []*api_v1.Node) ([]*api_v1.Pod, error) {
 		}
 		rankedPods := rankEvictablePods(pods)
 		evictPods = append(evictPods, rankedPods...)
-		if len(evictPods) >= conf.Rules.MaxEvictSize {
+		if len(evictPods) >= evictSize {
 			fmt.Printf("maxEvictSize decide only top %v pods that marked as evict will be evicted.\n", evictSize)
 			evictPods = evictPods[:evictSize]
 			break
