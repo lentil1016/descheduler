@@ -110,7 +110,6 @@ data:
                 memory: 100
                 pod: 100
             mode: "event"
-            # mode: "event"
             time:
                 from: 10:00PM
                 for: "1h"
