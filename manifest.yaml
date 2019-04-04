@@ -22,11 +22,11 @@ rules:
   - 'list'
   - 'watch'
 - apiGroups:
-  - 'policy'
+  - ''
   resources:
-  - 'poddisruptionbudgets/status'
+  - 'pods/eviction'
   verbs:
-  - 'update'
+  - 'create'
 ---
 apiVersion: v1
 kind: ServiceAccount
