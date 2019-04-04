@@ -3,6 +3,14 @@
 # descheduler
 A descheduler server for kubernetes cluster.
 
+## Quice Start
+
+```
+kubectl apply -f https://raw.githubusercontent.com/lentil1016/descheduler/master/manifest.yaml
+```
+
+## Describe
+
 This scheduler runs as a server, and it makes evicting decisions more "gentlely".
 
 Every time it assesses resource status of the cluster and evicts certain number of pods(defined by `spec.rules.maxEvictSize` in config file). Then it waits for replicaSets pods of which is evicted to rebound to fully ready. Then it reassess the cluster and do another evicting again, until resources are banlanced.
