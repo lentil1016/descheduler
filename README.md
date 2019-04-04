@@ -3,11 +3,11 @@
 # descheduler
 A descheduler server for kubernetes cluster. 
 
-This scheduler run as a server, and it makes evicting decisions more "gentlely". 
+This scheduler runs as a server, and it makes evicting decisions more "gentlely". 
 
-Every time it assess resource status of the cluster and evicts certain number of pods(defined by `spec.rules.maxEvictSize` in config file),  waits for replica sets pods of which is evicted rebounded to fully ready, then reassess the cluster and evicting again.
+Every time it assess resource status of the cluster and evicts certain number of pods(defined by `spec.rules.maxEvictSize` in config file). Then it waits for replica sets pods of which is evicted rebounded to fully ready. Then it reassess the cluster and do another evicting again.
 
-It says you can get the nutrition you need from either food or pills, and this descheduler is the food, [kubernetes-incubator/descheduler](https://github.com/kubernetes-incubator/descheduler) is the pills.
+It says you can get the nutrition you need from either food or pills, and I believe [kubernetes-incubator/descheduler](https://github.com/kubernetes-incubator/descheduler) is the pills, this project is the food.
 
 ## Feature
 
