@@ -1,4 +1,4 @@
-[![CircleCI](https://circleci.com/gh/lentil1016/descheduler.svg?style=svg)](https://circleci.com/gh/lentil1016/descheduler)
+[![CircleCI](https://circleci.com/gh/lentil1016/descheduler.svg?style=svg)](https://circleci.com/gh/lentil1016/descheduler) [![Go Report Card](https://goreportcard.com/badge/github.com/lentil1016/descheduler)](https://goreportcard.com/report/github.com/lentil1016/descheduler)
 
 # descheduler
 A descheduler server for kubernetes cluster.
