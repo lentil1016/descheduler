@@ -29,6 +29,7 @@ type descheduler struct {
 	queue        workqueue.RateLimitingInterface
 	nodeInformer cache.SharedIndexInformer
 	rsInformer   cache.SharedIndexInformer
+	podInformer  cache.SharedIndexInformer
 }
 
 type Descheduler interface {
@@ -78,6 +79,20 @@ func CreateDescheduler() (Descheduler, error) {
 		0,
 		cache.Indexers{"byNamespace": cache.MetaNamespaceIndexFunc})
 
+	// create a pod informer
+	podInformer := cache.NewSharedIndexInformer(
+		&cache.ListWatch{
+			ListFunc: func(options v1.ListOptions) (k8sruntime.Object, error) {
+				return client.CoreV1().Pods("").List(options)
+			},
+			WatchFunc: func(options v1.ListOptions) (watch.Interface, error) {
+				return client.CoreV1().Pods("").Watch(options)
+			},
+		},
+		&api_v1.Pod{},
+		0,
+		cache.Indexers{"byNode": predictor.MetaPodNodeIndexFunc})
+
 	nodeInformer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		// Only handle the update event, because nodes get ready with an update event ultimately.
 		UpdateFunc: func(old, new interface{}) {
@@ -115,6 +130,7 @@ func CreateDescheduler() (Descheduler, error) {
 
 	predictor.Init(nodeInformer.GetIndexer(),
 		rsInformer.GetIndexer(),
+		podInformer.GetIndexer(),
 		client)
 
 	return &descheduler{
@@ -122,6 +138,7 @@ func CreateDescheduler() (Descheduler, error) {
 		queue:        queue,
 		nodeInformer: nodeInformer,
 		rsInformer:   rsInformer,
+		podInformer:  podInformer,
 	}, nil
 }
 
@@ -150,6 +167,16 @@ func (d *descheduler) Run(stopCh chan struct{}) {
 			return
 		}
 	}
+	{
+		ch := make(chan struct{})
+		defer close(ch)
+		go d.podInformer.Run(ch)
+		if !cache.WaitForCacheSync(ch, d.podInformer.HasSynced) {
+			runtime.HandleError(fmt.Errorf("Timed out waiting for raplica sets caches to sync"))
+			return
+		}
+	}
+
 	fmt.Println("descheduler synced and ready")
 
 	// Timer will start if descheduler is configred as time triggered mode

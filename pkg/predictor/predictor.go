@@ -11,18 +11,20 @@ import (
 type indexersType struct {
 	nodeIndexer cache.Indexer
 	rsIndexer   cache.Indexer
+	podIndexer  cache.Indexer
 }
 
 var indexers indexersType
-var client kubernetes.Interface
 var conf config.ConfigSpec
 var nodeLister lister_apiv1.NodeLister
 var rsLister lister_appv1.ReplicaSetLister
+var client kubernetes.Interface
 
-func Init(nodeIndexer, rsIndexer cache.Indexer, clientset kubernetes.Interface) {
+func Init(nodeIndexer, rsIndexer, podIndexer cache.Indexer, clientset kubernetes.Interface) {
 	indexers = indexersType{
 		nodeIndexer: nodeIndexer,
 		rsIndexer:   rsIndexer,
+		podIndexer:  podIndexer,
 	}
 	client = clientset
 	conf = config.GetConfig()

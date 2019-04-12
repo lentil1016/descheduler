@@ -7,9 +7,8 @@ import (
 	api_v1 "k8s.io/api/core/v1"
 	policy "k8s.io/api/policy/v1beta1"
 	apierrors "k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/meta"
 	"k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/fields"
-	api "k8s.io/kubernetes/pkg/apis/core"
 	"k8s.io/kubernetes/pkg/kubelet/types"
 )
 
@@ -179,26 +178,24 @@ func isCriticalPod(pod *api_v1.Pod) bool {
 	return types.IsCriticalPod(pod)
 }
 
-func getPodsOnNode(node *api_v1.Node) ([]*api_v1.Pod, error) {
-	fieldSelector, err := fields.ParseSelector("spec.nodeName=" + node.Name + ",status.phase!=" + string(api.PodFailed))
+func MetaPodNodeIndexFunc(obj interface{}) ([]string, error) {
+	meta, err := meta.Accessor(obj)
 	if err != nil {
-		return []*api_v1.Pod{}, err
+		return []string{""}, fmt.Errorf("object has no meta: %v", err)
 	}
-	return getPods(fieldSelector)
+	return []string{meta.(*api_v1.Pod).Spec.NodeName}, nil
 }
 
-func getPods(fieldSelector fields.Selector) ([]*api_v1.Pod, error) {
-	podList, err := client.CoreV1().Pods(api_v1.NamespaceAll).List(
-		v1.ListOptions{FieldSelector: fieldSelector.String()})
+func getPodsOnNode(node *api_v1.Node) ([]*api_v1.Pod, error) {
+	pods, err := indexers.podIndexer.ByIndex("byNode", node.ObjectMeta.Name)
 	if err != nil {
 		return []*api_v1.Pod{}, err
 	}
-
-	pods := make([]*api_v1.Pod, 0)
-	for i := range podList.Items {
-		pods = append(pods, &podList.Items[i])
+	ret := []*api_v1.Pod{}
+	for _, pod := range pods {
+		ret = append(ret, pod.(*api_v1.Pod))
 	}
-	return pods, nil
+	return ret, nil
 }
 
 func Evict(pods []*api_v1.Pod) {

@@ -5,8 +5,6 @@ import (
 
 	apps_v1 "k8s.io/api/apps/v1"
 	api_v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/fields"
-	api "k8s.io/kubernetes/pkg/apis/core"
 )
 
 func GetReplicaSetByKey(key string) *apps_v1.ReplicaSet {
@@ -96,12 +94,4 @@ func getPodReplicaSet(pod *api_v1.Pod) *apps_v1.ReplicaSet {
 		return rss[0]
 	}
 	return nil
-}
-
-func getPodsInReplicaSet(rs *apps_v1.ReplicaSet) ([]*api_v1.Pod, error) {
-	fieldSelector, err := fields.ParseSelector("spec.nodeName=" + ",status.phase!=" + string(api.PodFailed))
-	if err != nil {
-		return []*api_v1.Pod{}, err
-	}
-	return getPods(fieldSelector)
 }
